@@ -7,8 +7,6 @@
 #define PIN 5
 #define NUMPIXELS 36
 
-Adafruit_LiquidCrystal lcd(0);
-
 char keys[4][4] = {
   {'1','2','3','A'},
   {'4','5','6','B'},
@@ -71,6 +69,49 @@ class StripController{
     }
     strip.show();
   }
+  
+  void clear(){
+    strip.clear();
+    strip.show();
+  }
+};
+
+class LcdController{
+  private:
+  String line1 = "";
+  String line2 = "";
+  Adafruit_LiquidCrystal lcd;
+  
+  public:
+  LcdController() : lcd(0){}
+  
+  void begin(){
+    lcd.begin(16, 2);
+  }
+  
+  void print(String line1, String line2){
+    this->line1 = line1;
+    this->line2 = line2;
+    lcd.clear();
+    lcd.setCursor(0, 0);
+    lcd.print(line1);
+    lcd.setCursor(0, 1);
+    lcd.print(line2);
+  }
+  
+  void briefPrint(String line1, String line2, int time){
+    lcd.clear();
+    lcd.setCursor(0, 0);
+    lcd.print(line1);
+    lcd.setCursor(0, 1);
+    lcd.print(line2);
+    delay(time);
+    lcd.clear();
+    lcd.setCursor(0, 0);
+    lcd.print(this->line1);
+    lcd.setCursor(0, 1);
+    lcd.print(this->line2);
+  }
 };
 
 class CollisionMap{
@@ -119,13 +160,22 @@ class Entity{
   private:
   int x = 1;
   int y = 1;
+  int health = 100;
   StripController &sc;
+  LcdController &lc;
   CollisionMap *cm;
+  
   int r, g, b;
   
   public:
-  Entity(StripController &sc, CollisionMap &cm, int r, int g, int b) : sc(sc), 
-  												cm(&cm), r(r), g(g), b(b){}
+  Entity(StripController &sc, LcdController &lc, CollisionMap &cm, 
+         int r, int g, int b) : sc(sc), lc(lc), cm(&cm), r(r), g(g), b(b){}
+  
+  void reset(){
+    x = 1;
+    y = 1;
+    health = 100;
+  }
   
   void draw(){
     sc.setPixel(x, y, r, g, b);
@@ -157,11 +207,19 @@ class Entity{
   }
   
   void changeCollisionMap(void *newMap){
-    this->cm = static_cast<CollisionMap*>(newMap);
+    cm = static_cast<CollisionMap*>(newMap);
+    if(cm->hasCollision(x, y) == true){
+      resetGame();
+    }
+  }
+  
+  void printHealth(int time){
+    lc.briefPrint("Player health:", String(health), time);
   }
 };
 
 StripController sc;
+LcdController lc;
 int lightMapMatrix[6][6] = {
   {0, 1, 0, 0, 1, 1},
   {1, 1, 0, 0, 0, 0},
@@ -178,23 +236,35 @@ int darkMapMatrix[6][6] = {
   {0, 0, 0, 1, 0, 0},
   {1, 1, 0, 1, 0, 0},
 };
-bool isLight = true;
+bool isLight = false;
 CollisionMap cmLight(sc, lightMapMatrix);
 CollisionMap cmDark(sc, darkMapMatrix);
-Entity player(sc, cmLight, 0, 0, 255);
+Entity player(sc, lc, cmDark, 0, 0, 255);
+
+void resetGame(){
+  sc.setAll(255, 0, 0);
+  lc.print("WELCOME TO", "THE GAME");
+  delay(100);
+  sc.clear();
+  player.reset();
+  player.draw();
+  if(isLight){
+  	cmLight.draw();
+  }
+  else{
+    cmDark.draw();
+  }
+}
 
 void setup() {
   pinMode(A0, INPUT);
-  
-  lcd.begin(16, 2);
-  lcd.print("WELCOME");
-  
+  lc.begin();
   sc.begin();
-  player.draw();
-  cmLight.draw();
+  
+  resetGame();
 }
 
-void loop() {
+void loop(){
   char key = keypad.getKey();
   int lightValue = analogRead(A0);
   if(lightValue >= 512 && !isLight){
@@ -210,7 +280,7 @@ void loop() {
     isLight = false;
   }
     
-  if (key) {
+  if (key){
     if(key == '2'){
       player.hide();
       player.moveX(-1);
@@ -230,6 +300,9 @@ void loop() {
       player.hide();
       player.moveY(1);
       player.draw();
+    }
+    else if(key == '*'){
+      player.printHealth(500);
     }
   }
 }

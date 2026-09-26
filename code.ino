@@ -164,13 +164,23 @@ class Entity{
 StripController sc;
 int lightMapMatrix[6][6] = {
   {0, 1, 0, 0, 1, 1},
-  {0, 1, 0, 0, 0, 0},
+  {1, 1, 0, 0, 0, 0},
   {0, 1, 1, 1, 0, 0},
   {0, 0, 0, 0, 0, 0},
   {0, 0, 0, 1, 0, 0},
   {1, 1, 0, 1, 0, 0},
 };
+int darkMapMatrix[6][6] = {
+  {0, 1, 0, 0, 1, 1},
+  {0, 1, 0, 0, 0, 0},
+  {0, 1, 1, 1, 0, 0},
+  {1, 1, 0, 0, 0, 0},
+  {0, 0, 0, 1, 0, 0},
+  {1, 1, 0, 1, 0, 0},
+};
+bool isLight = true;
 CollisionMap cmLight(sc, lightMapMatrix);
+CollisionMap cmDark(sc, darkMapMatrix);
 Entity player(sc, cmLight, 0, 0, 255);
 
 void setup() {
@@ -186,7 +196,20 @@ void setup() {
 
 void loop() {
   char key = keypad.getKey();
-  
+  int lightValue = analogRead(A0);
+  if(lightValue >= 512 && !isLight){
+    cmDark.hide();
+    cmLight.draw();
+    player.changeCollisionMap(&cmLight);
+    isLight = true;
+  }
+  else if(lightValue < 512 && isLight){
+    cmLight.hide();
+    cmDark.draw();
+    player.changeCollisionMap(&cmDark);
+    isLight = false;
+  }
+    
   if (key) {
     if(key == '2'){
       player.hide();

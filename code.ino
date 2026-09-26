@@ -44,6 +44,9 @@ class StripController{
   
   void setPixel(int row, int col, int r, int g, int b){
     strip.setPixelColor(pixelMatrix[row - 1][col - 1], strip.Color(r, g, b));
+  }
+  
+  void show(){
     strip.show();
   }
   
@@ -95,11 +98,9 @@ class StripController{
   }
   
   void setAll(int r, int g, int b){
-    strip.clear();
-    for (int row = 0; row < 6; ++row){
-      for (int col = 0; col < 6; ++col){
-        strip.setPixelColor(pixelMatrix[row][col], strip.Color(r, g, b));
-      }
+    uint32_t color = strip.Color(r, g, b);
+    for (int i = 0; i < NUMPIXELS; i++){
+      strip.setPixelColor(i, color);
     }
     strip.show();
   }
@@ -170,6 +171,7 @@ class CollisionMap{
         }
       }
     }
+    sc.show();
   }
   
   void hide(){
@@ -180,6 +182,7 @@ class CollisionMap{
         }
       }
     }
+    sc.show();
   }
   
   bool hasCollision(int x, int y){
@@ -190,7 +193,7 @@ class CollisionMap{
   }
 };
 
-class Entity{
+class Player{
   private:
   int x = 1;
   int y = 1;
@@ -204,7 +207,7 @@ class Entity{
   int r, g, b;
   
   public:
-  Entity(StripController &sc, LcdController &lc, CollisionMap &cm, 
+  Player(StripController &sc, LcdController &lc, CollisionMap &cm, 
          int winX, int winY, int r, int g, int b) : sc(sc), lc(lc), 
   		 cm(&cm), winX(winX), winY(winY), r(r), g(g), b(b){}
   
@@ -216,10 +219,12 @@ class Entity{
   
   void draw(){
     sc.setPixel(x, y, r, g, b);
+    sc.show();
   }
   
   void hide(){
     sc.setPixel(x, y, 0, 0, 0);
+    sc.show();
   }
   
   void setLocation(int x, int y){
@@ -254,6 +259,8 @@ class Entity{
   void changeCollisionMap(void *newMap){
     cm = static_cast<CollisionMap*>(newMap);
     if(cm->hasCollision(x, y) == true){
+      lc.print("YOU LOST", "THE GAME");
+      delay(500);
       resetGame();
     }
   }
@@ -285,7 +292,7 @@ bool isLight = false;
 CollisionMap cmLight(sc, lightMapMatrix);
 CollisionMap cmDark(sc, darkMapMatrix);
 int winNode[2] = {6, 6};
-Entity player(sc, lc, cmDark, winNode[0], winNode[1], 0, 0, 255);
+Player player(sc, lc, cmDark, winNode[0], winNode[1], 0, 0, 255);
 
 void resetGame(){
   sc.setAll(255, 0, 0);
@@ -301,6 +308,7 @@ void resetGame(){
     cmDark.draw();
   }
   sc.setPixel(winNode[0], winNode[1], 0, 255, 0);
+  sc.show();
 }
 
 void setup() {

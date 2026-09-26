@@ -7,6 +7,8 @@
 #define PIN 5
 #define NUMPIXELS 36
 
+void resetGame();
+
 char keys[4][4] = {
   {'1','2','3','A'},
   {'4','5','6','B'},
@@ -46,18 +48,50 @@ class StripController{
   }
   
   void rainbow(int cycles){
-    strip.clear();
-    
-    for (int shift = 0; shift < cycles * 65; ++shift){
-      for (int row = 0; row < 6; ++row){
-        for (int col = 0; col < 6; ++col){
-          int hue = (shift * 1000L + col * 10000L) % 65536;
-          strip.setPixelColor(pixelMatrix[row][col], strip.ColorHSV(hue));
+    for(int shift = 0; shift < cycles * 36; shift++){
+      for(int col = 0; col < 6; col++){
+        int color = (col + shift) % 36;
+        int r, g, b;
+        if(color < 6){
+          r = 255;
+          g = color * 51;
+          b = 0;
+        }
+        else if(color < 12){
+          r = (11 - color) * 51;
+          g = 255;
+          b = 0;
+        }
+        else if(color < 18){
+          r = 0;
+          g = 255;
+          b = (color - 12) * 51;
+        }
+        else if(color < 24){
+          r = 0;
+          g = (23 - color) * 51;
+          b = 255;
+        }
+        else if(color < 30){
+          r = (color - 24) * 51;
+          g = 0;
+          b = 255;
+        }
+        else{
+          r = 255;
+          g = 0;
+          b = (35 - color) * 51;
+        }
+        for(int row = 0; row < 6; row++){
+          strip.setPixelColor(
+            pixelMatrix[row][col],
+            strip.Color(r, g, b)
+          );
         }
       }
       strip.show();
-      delay(5);
-    }
+      delay(50);
+  	}
   }
   
   void setAll(int r, int g, int b){
@@ -164,12 +198,15 @@ class Entity{
   StripController &sc;
   LcdController &lc;
   CollisionMap *cm;
+  int winX;
+  int winY;
   
   int r, g, b;
   
   public:
   Entity(StripController &sc, LcdController &lc, CollisionMap &cm, 
-         int r, int g, int b) : sc(sc), lc(lc), cm(&cm), r(r), g(g), b(b){}
+         int winX, int winY, int r, int g, int b) : sc(sc), lc(lc), 
+  		 cm(&cm), winX(winX), winY(winY), r(r), g(g), b(b){}
   
   void reset(){
     x = 1;
@@ -195,14 +232,22 @@ class Entity{
   }
   
   void moveX(int amount){
-    if(this->x + amount <= 6 && this->x + amount >= 1 && !cm->hasCollision(x + amount, y)){
-      this->x += amount;
+    if(x + amount <= 6 && x + amount >= 1 && !cm->hasCollision(x + amount, y)){
+      x += amount;
+      if(x == winX && y == winY){
+        sc.rainbow(1);
+        resetGame();
+      }
     }
   }
   
   void moveY(int amount){
-    if(this->y + amount <= 6 && this->y + amount >= 1 && !cm->hasCollision(x, y + amount)){
-      this->y += amount;
+    if(y + amount <= 6 && y + amount >= 1 && !cm->hasCollision(x, y + amount)){
+      y += amount;
+      if(x == winX && y == winY){
+        sc.rainbow(1);
+        resetGame();
+      }
     }
   }
   
@@ -239,7 +284,8 @@ int darkMapMatrix[6][6] = {
 bool isLight = false;
 CollisionMap cmLight(sc, lightMapMatrix);
 CollisionMap cmDark(sc, darkMapMatrix);
-Entity player(sc, lc, cmDark, 0, 0, 255);
+int winNode[2] = {6, 6};
+Entity player(sc, lc, cmDark, winNode[0], winNode[1], 0, 0, 255);
 
 void resetGame(){
   sc.setAll(255, 0, 0);
@@ -254,6 +300,7 @@ void resetGame(){
   else{
     cmDark.draw();
   }
+  sc.setPixel(winNode[0], winNode[1], 0, 255, 0);
 }
 
 void setup() {
@@ -270,12 +317,14 @@ void loop(){
   if(lightValue >= 512 && !isLight){
     cmDark.hide();
     cmLight.draw();
+    sc.setPixel(winNode[0], winNode[1], 0, 255, 0);
     player.changeCollisionMap(&cmLight);
     isLight = true;
   }
   else if(lightValue < 512 && isLight){
     cmLight.hide();
     cmDark.draw();
+    sc.setPixel(winNode[0], winNode[1], 0, 255, 0);
     player.changeCollisionMap(&cmDark);
     isLight = false;
   }

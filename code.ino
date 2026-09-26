@@ -21,8 +21,6 @@ byte colPins[4] = {9, 8, 7, 6};
 
 Keypad keypad = Keypad(makeKeymap(keys), rowPins, colPins, 4, 4);
 
-Adafruit_NeoPixel strip(NUMPIXELS, PIN, NEO_GRB + NEO_KHZ800);
-
 class StripController{
   private:
   Adafruit_NeoPixel strip;
@@ -75,15 +73,59 @@ class StripController{
   }
 };
 
+class CollisionMap{
+  private:
+  int collisionMatrix[6][6] = {{0}};
+  StripController &sc;
+  
+  public:
+  CollisionMap(StripController &sc, int collisionMatrix[6][6]) : sc(sc){
+    for (int row = 0; row < 6; ++row){
+      for (int col = 0; col < 6; ++col){
+        this->collisionMatrix[row][col] = collisionMatrix[row][col];
+      }
+    }
+  }
+  
+  void draw(){
+    for (int row = 0; row < 6; ++row){
+      for (int col = 0; col < 6; ++col){
+        if(collisionMatrix[row][col] == 1){
+          sc.setPixel(row + 1, col + 1, 255, 0, 0);
+        }
+      }
+    }
+  }
+  
+  void hide(){
+    for (int row = 0; row < 6; ++row){
+      for (int col = 0; col < 6; ++col){
+        if(collisionMatrix[row][col] == 1){
+          sc.setPixel(row + 1, col + 1, 0, 0, 0);
+        }
+      }
+    }
+  }
+  
+  bool hasCollision(int x, int y){
+    if(collisionMatrix[x - 1][y - 1] == 1){
+      return true;
+    }
+    return false;
+  }
+};
+
 class Entity{
   private:
   int x = 1;
   int y = 1;
-  StripController sc;
+  StripController &sc;
+  CollisionMap *cm;
   int r, g, b;
   
   public:
-  Entity(StripController &sc, int r, int g, int b) : sc(sc), r(r), g(g), b(b){}
+  Entity(StripController &sc, CollisionMap &cm, int r, int g, int b) : sc(sc), 
+  												cm(&cm), r(r), g(g), b(b){}
   
   void draw(){
     sc.setPixel(x, y, r, g, b);
@@ -103,27 +145,43 @@ class Entity{
   }
   
   void moveX(int amount){
-    if(this->x + amount <= 6 && this->x + amount >= 1){
+    if(this->x + amount <= 6 && this->x + amount >= 1 && !cm->hasCollision(x + amount, y)){
       this->x += amount;
     }
   }
   
   void moveY(int amount){
-    if(this->y + amount <= 6 && this->y + amount >= 1){
+    if(this->y + amount <= 6 && this->y + amount >= 1 && !cm->hasCollision(x, y + amount)){
       this->y += amount;
     }
+  }
+  
+  void changeCollisionMap(void *newMap){
+    this->cm = static_cast<CollisionMap*>(newMap);
   }
 };
 
 StripController sc;
-Entity player(sc, 0, 0, 255);
+int lightMapMatrix[6][6] = {
+  {0, 1, 0, 0, 1, 1},
+  {0, 1, 0, 0, 0, 0},
+  {0, 1, 1, 1, 0, 0},
+  {0, 0, 0, 0, 0, 0},
+  {0, 0, 0, 1, 0, 0},
+  {1, 1, 0, 1, 0, 0},
+};
+CollisionMap cmLight(sc, lightMapMatrix);
+Entity player(sc, cmLight, 0, 0, 255);
 
 void setup() {
+  pinMode(A0, INPUT);
+  
   lcd.begin(16, 2);
   lcd.print("WELCOME");
   
   sc.begin();
   player.draw();
+  cmLight.draw();
 }
 
 void loop() {

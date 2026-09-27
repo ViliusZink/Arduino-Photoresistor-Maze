@@ -40,6 +40,26 @@ class ButtonController{
   }
 };
 
+class SoundController{
+  public:
+  SoundController(){}
+  
+  void begin(){
+    pinMode(3, OUTPUT);
+  }
+  
+  void play(int frequency, int time){
+    tone(3, frequency, time);
+  }
+  
+  void playMelody(int *frequencies, int length, int time){
+    for(int i = 0; i < length; ++i){
+      tone(3, frequencies[i], time);
+      delay(time);
+    }
+  }
+};
+
 class StripController{
   private:
   Adafruit_NeoPixel strip;
@@ -271,6 +291,7 @@ class Player{
   int health = 100;
   StripController &sc;
   LcdController &lc;
+  SoundController &sdc;
   CollisionMap *cm;
   EnemyMap *em;
   int winX;
@@ -279,8 +300,9 @@ class Player{
   int r, g, b;
   
   public:
-  Player(StripController &sc, LcdController &lc, CollisionMap &cm, EnemyMap &em, 
-         int winX, int winY, int r, int g, int b) : sc(sc), lc(lc), 
+  Player(StripController &sc, LcdController &lc, 
+         SoundController &sdc ,CollisionMap &cm, EnemyMap &em, 
+         int winX, int winY, int r, int g, int b) : sc(sc), lc(lc), sdc(sdc), 
   		 cm(&cm), em(&em), winX(winX), winY(winY), r(r), g(g), b(b){}
   
   void reset(){
@@ -313,15 +335,21 @@ class Player{
       x += amount;
       if(x == winX && y == winY){
         lc.print("YOU WON", "THE GAME");
+        int melody[3] = {330, 349, 392};
+      	sdc.playMelody(melody, 3, 200);
         sc.rainbow(1);
         resetGame();
       }
       if(em->hasEnemy(x, y)){
+        sdc.play(500, 100);
         lc.briefPrint("ENEMY DID", "20 DAMAGE", 500);
         health -= 20;
         em->removeEnemy(x, y);
         dieIfCan();
       }
+    }
+    else{
+      sdc.play(300, 50);
     }
   }
   
@@ -330,15 +358,21 @@ class Player{
       y += amount;
       if(x == winX && y == winY){
         lc.print("YOU WON", "THE GAME");
+        int melody[3] = {330, 349, 392};
+      	sdc.playMelody(melody, 3, 300);
         sc.rainbow(1);
         resetGame();
       }
       if(em->hasEnemy(x, y)){
+        sdc.play(500, 100);
         lc.briefPrint("ENEMY DID", "20 DAMAGE", 500);
         health -= 20;
         em->removeEnemy(x, y);
         dieIfCan();
       }
+    }
+    else{
+      sdc.play(300, 50);
     }
   }
   
@@ -353,7 +387,8 @@ class Player{
   void dieIfCan(){
     if(health == 0){
       lc.print("YOU LOST", "THE GAME");
-      delay(500);
+      int melody[3] = {330, 294, 262};
+      sdc.playMelody(melody, 3, 300);
       resetGame();
     }
   }
@@ -365,6 +400,7 @@ class Player{
 };
 
 ButtonController bc;
+SoundController sdc;
 StripController sc;
 LcdController lc;
 byte lightMapMatrix[6][6] = {
@@ -396,7 +432,7 @@ CollisionMap cmLight(sc, lightMapMatrix);
 CollisionMap cmDark(sc, darkMapMatrix);
 EnemyMap em(sc, enemyMapMatrix);
 int winNode[2] = {6, 6};
-Player player(sc, lc, cmDark, em, winNode[0], winNode[1], 0, 0, 255);
+Player player(sc, lc, sdc, cmDark, em, winNode[0], winNode[1], 0, 0, 255);
 
 void resetGame(){
   sc.setAll(255, 0, 0);
@@ -415,7 +451,7 @@ void resetGame(){
   em.draw();
   sc.setPixel(winNode[0], winNode[1], 0, 255, 0);
   sc.show();
-  lc.print("2 4 6 8 TO MOVE", "LIGHT CHANGE MAP");
+  lc.print("BUTTONS TO MOVE", "LIGHT CHANGE MAP");
 }
 
 void setup() {
@@ -423,6 +459,7 @@ void setup() {
   lc.begin();
   sc.begin();
   bc.begin();
+  sdc.begin();
   
   resetGame();
 }

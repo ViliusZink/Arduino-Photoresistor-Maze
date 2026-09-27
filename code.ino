@@ -51,50 +51,46 @@ class StripController{
   }
   
   void rainbow(int cycles){
-    for(int shift = 0; shift < cycles * 36; shift++){
-      for(int col = 0; col < 6; col++){
-        int color = (col + shift) % 36;
-        int r, g, b;
-        if(color < 6){
-          r = 255;
-          g = color * 51;
-          b = 0;
-        }
-        else if(color < 12){
-          r = (11 - color) * 51;
-          g = 255;
-          b = 0;
-        }
-        else if(color < 18){
-          r = 0;
-          g = 255;
-          b = (color - 12) * 51;
-        }
-        else if(color < 24){
-          r = 0;
-          g = (23 - color) * 51;
-          b = 255;
-        }
-        else if(color < 30){
-          r = (color - 24) * 51;
-          g = 0;
-          b = 255;
-        }
-        else{
-          r = 255;
-          g = 0;
-          b = (35 - color) * 51;
-        }
-        for(int row = 0; row < 6; row++){
+    byte colors[18][3] = {
+      {255,  85,   0},
+      {255, 170,   0},
+      {255, 255,   0},
+
+      {170, 255,   0},
+      { 85, 255,   0},
+      {  0, 255,   0},
+        
+      {  0, 255,  85},
+      {  0, 255, 170},
+      {  0, 255, 255},
+        
+      {  0, 170, 255},
+      {  0,  85, 255},
+      {  0,   0, 255},
+        
+      { 85,   0, 255},
+      {170,   0, 255},
+      {255,   0, 255},
+        
+      {255,   0, 170},
+      {255,   0,  85},
+      {255,   0,   0}
+    };
+    for (int shift = 0; shift < cycles * 18; shift++) {
+      for (int col = 0; col < 6; ++col) {
+        int color = (col + shift) % 18;
+        for (int row = 0; row < 6; ++row) {
           strip.setPixelColor(
-            pixelMatrix[row][col],
-            strip.Color(r, g, b)
-          );
+                      pixelMatrix[row][col],
+                      strip.Color(
+                        colors[color][0],
+                        colors[color][1],
+                        colors[color][2]));
         }
       }
       strip.show();
       delay(50);
-  	}
+    } 
   }
   
   void setAll(int r, int g, int b){
@@ -124,17 +120,17 @@ class LcdController{
     lcd.begin(16, 2);
   }
   
-  void print(String line1, String line2){
-    this->line1 = line1;
-    this->line2 = line2;
+  void print(char* line1, char* line2){
     lcd.clear();
     lcd.setCursor(0, 0);
     lcd.print(line1);
     lcd.setCursor(0, 1);
     lcd.print(line2);
+    this->line1 = line1;
+    this->line2 = line2;
   }
   
-  void briefPrint(String line1, String line2, int time){
+  void briefPrint(char* line1, char* line2, int time){
     lcd.clear();
     lcd.setCursor(0, 0);
     lcd.print(line1);
@@ -240,6 +236,7 @@ class Player{
     if(x + amount <= 6 && x + amount >= 1 && !cm->hasCollision(x + amount, y)){
       x += amount;
       if(x == winX && y == winY){
+        lc.print("YOU WON", "THE GAME");
         sc.rainbow(1);
         resetGame();
       }
@@ -250,6 +247,7 @@ class Player{
     if(y + amount <= 6 && y + amount >= 1 && !cm->hasCollision(x, y + amount)){
       y += amount;
       if(x == winX && y == winY){
+        lc.print("YOU WON", "THE GAME");
         sc.rainbow(1);
         resetGame();
       }
@@ -266,7 +264,8 @@ class Player{
   }
   
   void printHealth(int time){
-    lc.briefPrint("Player health:", String(health), time);
+    char healthString[16];
+    lc.briefPrint("Player health:", itoa(health, healthString, 10), time);
   }
 };
 

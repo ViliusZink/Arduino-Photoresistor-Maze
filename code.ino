@@ -471,15 +471,15 @@ void loop(){
     cmDark.hide();
     cmLight.draw();
     sc.setPixel(winNode[0], winNode[1], 0, 255, 0);
-    player.changeCollisionMap(&cmLight);
     isLight = true;
+    player.changeCollisionMap(&cmLight);
   }
   else if(lightValue < 512 && isLight){
     cmLight.hide();
     cmDark.draw();
     sc.setPixel(winNode[0], winNode[1], 0, 255, 0);
-    player.changeCollisionMap(&cmDark);
     isLight = false;
+    player.changeCollisionMap(&cmDark);
   }
     
   if (key){

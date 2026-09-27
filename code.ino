@@ -24,7 +24,7 @@ Keypad keypad = Keypad(makeKeymap(keys), rowPins, colPins, 4, 4);
 class StripController{
   private:
   Adafruit_NeoPixel strip;
-  int pixelMatrix[6][6] = {
+  byte pixelMatrix[6][6] = {
   {30, 31, 32, 33, 34, 35},
   {24, 25, 26, 27, 28, 29},
   {18, 19, 20, 21, 22, 23},
@@ -109,8 +109,8 @@ class StripController{
 
 class LcdController{
   private:
-  String line1 = "";
-  String line2 = "";
+  char line1[17] = "";
+  char line2[17] = "";
   Adafruit_LiquidCrystal lcd;
   
   public:
@@ -126,8 +126,8 @@ class LcdController{
     lcd.print(line1);
     lcd.setCursor(0, 1);
     lcd.print(line2);
-    this->line1 = line1;
-    this->line2 = line2;
+    strcpy(this->line1, line1);
+    strcpy(this->line2, line2);
   }
   
   void briefPrint(char* line1, char* line2, int time){
@@ -147,11 +147,11 @@ class LcdController{
 
 class CollisionMap{
   private:
-  int collisionMatrix[6][6] = {{0}};
+  byte collisionMatrix[6][6] = {{0}};
   StripController &sc;
   
   public:
-  CollisionMap(StripController &sc, int collisionMatrix[6][6]) : sc(sc){
+  CollisionMap(StripController &sc, byte collisionMatrix[6][6]) : sc(sc){
     for (int row = 0; row < 6; ++row){
       for (int col = 0; col < 6; ++col){
         this->collisionMatrix[row][col] = collisionMatrix[row][col];
@@ -189,6 +189,62 @@ class CollisionMap{
   }
 };
 
+class EnemyMap{
+  private:
+  byte enemyMatrix[6][6] = {{0}};
+  StripController &sc;
+  
+  public:
+  EnemyMap(StripController &sc, byte enemyMatrix[6][6]) : sc(sc){
+    for (int row = 0; row < 6; ++row){
+      for (int col = 0; col < 6; ++col){
+        this->enemyMatrix[row][col] = enemyMatrix[row][col];
+      }
+    }
+  }
+  
+  void draw(){
+    for (int row = 0; row < 6; ++row){
+      for (int col = 0; col < 6; ++col){
+        if(enemyMatrix[row][col] == 1){
+          sc.setPixel(row + 1, col + 1, 255, 170, 0);
+        }
+      }
+    }
+    sc.show();
+  }
+  
+  void hide(){
+    for (int row = 0; row < 6; ++row){
+      for (int col = 0; col < 6; ++col){
+        if(enemyMatrix[row][col] == 1){
+          sc.setPixel(row + 1, col + 1, 0, 0, 0);
+        }
+      }
+    }
+    sc.show();
+  }
+  
+  bool hasEnemy(int x, int y){
+    if(enemyMatrix[x - 1][y - 1] == 1){
+      return true;
+    }
+    return false;
+  }
+  
+  void removeEnemy(int x, int y){
+    enemyMatrix[x - 1][y - 1] = 0;
+  }
+  
+  void reset(byte enemyMatrix[6][6]){
+    for (int row = 0; row < 6; ++row){
+      for (int col = 0; col < 6; ++col){
+        this->enemyMatrix[row][col] = enemyMatrix[row][col];
+      }
+    }
+  }
+};
+
 class Player{
   private:
   int x = 1;
@@ -197,15 +253,16 @@ class Player{
   StripController &sc;
   LcdController &lc;
   CollisionMap *cm;
+  EnemyMap *em;
   int winX;
   int winY;
   
   int r, g, b;
   
   public:
-  Player(StripController &sc, LcdController &lc, CollisionMap &cm, 
+  Player(StripController &sc, LcdController &lc, CollisionMap &cm, EnemyMap &em, 
          int winX, int winY, int r, int g, int b) : sc(sc), lc(lc), 
-  		 cm(&cm), winX(winX), winY(winY), r(r), g(g), b(b){}
+  		 cm(&cm), em(&em), winX(winX), winY(winY), r(r), g(g), b(b){}
   
   void reset(){
     x = 1;
@@ -240,6 +297,12 @@ class Player{
         sc.rainbow(1);
         resetGame();
       }
+      if(em->hasEnemy(x, y)){
+        lc.briefPrint("ENEMY DID", "20 DAMAGE", 500);
+        health -= 20;
+        em->removeEnemy(x, y);
+        dieIfCan();
+      }
     }
   }
   
@@ -251,12 +314,25 @@ class Player{
         sc.rainbow(1);
         resetGame();
       }
+      if(em->hasEnemy(x, y)){
+        lc.briefPrint("ENEMY DID", "20 DAMAGE", 500);
+        health -= 20;
+        em->removeEnemy(x, y);
+        dieIfCan();
+      }
     }
   }
   
   void changeCollisionMap(void *newMap){
     cm = static_cast<CollisionMap*>(newMap);
     if(cm->hasCollision(x, y) == true){
+      health = 0;
+      dieIfCan();
+    }
+  }
+  
+  void dieIfCan(){
+    if(health == 0){
       lc.print("YOU LOST", "THE GAME");
       delay(500);
       resetGame();
@@ -271,7 +347,7 @@ class Player{
 
 StripController sc;
 LcdController lc;
-int lightMapMatrix[6][6] = {
+byte lightMapMatrix[6][6] = {
   {0, 1, 0, 0, 1, 1},
   {1, 1, 0, 0, 0, 0},
   {0, 1, 1, 1, 0, 0},
@@ -279,7 +355,7 @@ int lightMapMatrix[6][6] = {
   {0, 0, 0, 1, 0, 0},
   {1, 1, 0, 1, 0, 0},
 };
-int darkMapMatrix[6][6] = {
+byte darkMapMatrix[6][6] = {
   {0, 1, 0, 0, 1, 1},
   {0, 1, 0, 0, 0, 0},
   {0, 1, 1, 1, 0, 0},
@@ -287,11 +363,20 @@ int darkMapMatrix[6][6] = {
   {0, 0, 0, 1, 0, 0},
   {1, 1, 0, 1, 0, 0},
 };
+byte enemyMapMatrix[6][6] = {
+  {0, 0, 0, 0, 0, 0},
+  {0, 0, 0, 0, 0, 0},
+  {0, 0, 0, 0, 0, 0},
+  {0, 0, 1, 1, 1, 1},
+  {0, 0, 1, 0, 0, 0},
+  {0, 0, 0, 0, 0, 0},
+};
 bool isLight = false;
 CollisionMap cmLight(sc, lightMapMatrix);
 CollisionMap cmDark(sc, darkMapMatrix);
+EnemyMap em(sc, enemyMapMatrix);
 int winNode[2] = {6, 6};
-Player player(sc, lc, cmDark, winNode[0], winNode[1], 0, 0, 255);
+Player player(sc, lc, cmDark, em, winNode[0], winNode[1], 0, 0, 255);
 
 void resetGame(){
   sc.setAll(255, 0, 0);
@@ -306,8 +391,11 @@ void resetGame(){
   else{
     cmDark.draw();
   }
+  em.reset(enemyMapMatrix);
+  em.draw();
   sc.setPixel(winNode[0], winNode[1], 0, 255, 0);
   sc.show();
+  lc.print("2 4 6 8 TO MOVE", "LIGHT CHANGE MAP");
 }
 
 void setup() {

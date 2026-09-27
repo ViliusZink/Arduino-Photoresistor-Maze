@@ -1,7 +1,6 @@
 // C++ code
 //
 #include <Adafruit_LiquidCrystal.h>
-#include <Keypad.h>
 #include <Adafruit_NeoPixel.h>
 
 #define PIN 5
@@ -9,17 +8,37 @@
 
 void resetGame();
 
-char keys[4][4] = {
-  {'1','2','3','A'},
-  {'4','5','6','B'},
-  {'7','8','9','C'},
-  {'*','0','#','D'}
+class ButtonController{
+  public:
+  ButtonController(){}
+  
+  void begin(){
+    pinMode(13, INPUT);
+    pinMode(12, INPUT);
+    pinMode(11, INPUT);
+    pinMode(10, INPUT);
+    pinMode(9, INPUT);
+  }
+  
+  char getKey(){
+    if(digitalRead(13) == HIGH){
+    	return 'U';
+    }
+    else if(digitalRead(12) == HIGH){
+    	return 'D';
+    }
+    else if(digitalRead(11) == HIGH){
+    	return 'L';
+    }
+    else if(digitalRead(10) == HIGH){
+    	return 'R';
+    }
+    else if(digitalRead(9) == HIGH){
+    	return 'H';
+    }
+    return ' ';
+  }
 };
-
-byte rowPins[4] = {13, 12, 11, 10}; 
-byte colPins[4] = {9, 8, 7, 6}; 
-
-Keypad keypad = Keypad(makeKeymap(keys), rowPins, colPins, 4, 4);
 
 class StripController{
   private:
@@ -345,6 +364,7 @@ class Player{
   }
 };
 
+ButtonController bc;
 StripController sc;
 LcdController lc;
 byte lightMapMatrix[6][6] = {
@@ -402,12 +422,13 @@ void setup() {
   pinMode(A0, INPUT);
   lc.begin();
   sc.begin();
+  bc.begin();
   
   resetGame();
 }
 
 void loop(){
-  char key = keypad.getKey();
+  char key = bc.getKey();
   int lightValue = analogRead(A0);
   if(lightValue >= 512 && !isLight){
     cmDark.hide();
@@ -425,27 +446,27 @@ void loop(){
   }
     
   if (key){
-    if(key == '2'){
+    if(key == 'U'){
       player.hide();
       player.moveX(-1);
       player.draw();
     }
-    else if(key == '8'){
+    else if(key == 'D'){
       player.hide();
       player.moveX(1);
       player.draw();
     }
-    else if(key == '4'){
+    else if(key == 'L'){
       player.hide();
       player.moveY(-1);
       player.draw();
     }
-    else if(key == '6'){
+    else if(key == 'R'){
       player.hide();
       player.moveY(1);
       player.draw();
     }
-    else if(key == '*'){
+    else if(key == 'H'){
       player.printHealth(500);
     }
   }

@@ -1,6 +1,6 @@
 # Arduino Photoresistor Maze
 
-A simple game realized through the Tinkercad environment. The player move through a LED matrix while avoiding obstacles and enemies. Player can also switch between two states of the map by controlling a photoresistor.
+A simple game realized through the Tinkercad environment. The player can move through a LED matrix while avoiding obstacles and enemies. Player can also switch between two states of the map by controlling a photoresistor.
 
 # Link to the Tinkercad circuit
 
